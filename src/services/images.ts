@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import { fileURLToPath } from "url";
-import { sleep } from "./utils.js";
+import prisma from "../prisma.js";
+import { sleep } from "../utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,4 +80,51 @@ export const saveImageToFile = (buffer, filename) => {
   const filePath = path.join(__dirname, "images", filename);
   fs.writeFileSync(filePath, buffer);
   return filePath;
+};
+
+export const createChapterImagesFromChapterNumbers = async (
+  chaptersToDownload,
+  mangaId
+) => {
+  const assembledImages = {};
+
+  await Promise.all(
+    Object.entries(chaptersToDownload).map(async ([key, urls]) => {
+      await sleep(10000);
+      const imageBuffer = await assembleImages(urls);
+      const filePath = saveImageToFile(imageBuffer, `${key}.png`);
+      const manga = await prisma.chapter.findUnique({
+        where: {
+          number_mangaId: {
+            number: Number(key.split("_")[0]),
+            mangaId: mangaId,
+          },
+        },
+      });
+      if (manga) {
+        await prisma.chapter.update({
+          where: {
+            number_mangaId: {
+              number: Number(key.split("_")[0]),
+              mangaId: mangaId,
+            },
+          },
+          data: {
+            url: filePath,
+          },
+        });
+      } else {
+        await prisma.chapter.create({
+          data: {
+            number: Number(key.split("_")[0]),
+            mangaId: mangaId,
+            url: filePath,
+          },
+        });
+      }
+      assembledImages[key] = filePath;
+    })
+  );
+
+  return assembledImages;
 };

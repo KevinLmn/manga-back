@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import Fastify from "fastify";
-import prisma from "./prisma.js";
+import prisma from "../prisma.js";
 
 const fastify = Fastify();
 

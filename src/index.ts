@@ -1,24 +1,33 @@
 import fastifyCors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
-import axios from "axios";
 import Fastify, { FastifyReply, FastifyRequest } from "fastify";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { checkIfTokenIsValidAndResetIfNot, login } from "./authentification.js";
 import {
+  checkIfTokenIsValidAndResetIfNot,
+  login,
+} from "./services/authentification.js";
+import {
+  checkIfMangaExistsAndCreateIfNot,
   fetchManga,
   fetchMangaById,
+  getChapter,
   getChapterImagesToDownload,
-} from "./fetchManga.js";
-import { assembleImages, saveImageToFile } from "./images.js";
-import prisma from "./prisma.js";
-import { sleep } from "./utils.js";
-
-type RequestBody = {
-  username: string;
-  password: string;
-};
+  getChaptersPerManga,
+  getDownloadedChapters,
+} from "./services/fetchManga.js";
+import { createChapterImagesFromChapterNumbers } from "./services/images.js";
+import {
+  ChapterIdParams,
+  DownloadChapterIdParams,
+  DownloadMangaIdParams,
+  DownloadMangaIdRequestBody,
+  LoginRequestBody,
+  MangaIdParams,
+  MangaIdRequestBody,
+  MangaRequestBody,
+} from "./utils.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -31,9 +40,7 @@ declare module "fastify" {
 const fastify = Fastify({ logger: true });
 
 await fastify.register(fastifyCors, {
-  origin: "*", // Autoriser toutes les origines
-  methods: ["GET", "POST", "PUT", "DELETE"], // Autoriser ces méthodes HTTP
-  allowedHeaders: ["Content-Type", "Authorization"], // Autoriser ces en-têtes
+  origin: "*",
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,7 +58,7 @@ fastify.register(fastifyStatic, {
 fastify.post(
   "/login",
   async (
-    request: FastifyRequest<{ Body: RequestBody }>,
+    request: FastifyRequest<{ Body: LoginRequestBody }>,
     reply: FastifyReply
   ) => {
     const { username, password } = request.body;
@@ -79,197 +86,122 @@ fastify.addHook("preHandler", async (request, reply) => {
   }
 });
 
-fastify.post("/manga", async (request, reply) => {
-  const token = request.headers.authorization;
-  const manga = await fetchManga(request.body.mangaName, token);
-  return { manga };
-});
-
-fastify.post("/manga/:id", async (request, reply) => {
-  const { id } = request.params;
-  const { limit, offset } = request.body;
-
-  const token = request.headers.authorization;
-  const manga = await fetchMangaById(id, limit, offset, token);
-  return { manga };
-});
-
-fastify.post("/manga/:id/download/", async (request, reply) => {
-  const { id } = request.params;
-  const { from, to } = request.body.chaptersToDownloadFrom;
-
-  try {
-    const manga = await prisma.manga.findUnique({
-      where: {
-        mangaDexId: id,
-      },
-    });
-    if (!manga) {
-      await prisma.manga.create({
-        data: {
-          mangaDexId: id,
-        },
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    reply.status(500).send("An error occurred");
+fastify.post(
+  "/manga",
+  async (request: FastifyRequest<{ Body: MangaRequestBody }>) => {
+    const { mangaName } = request.body;
+    const token = request.headers.authorization;
+    const manga = await fetchManga(mangaName, token);
+    return { manga };
   }
+);
 
-  const token = request.headers.authorization;
-  const chaptersToDownload = await getChapterImagesToDownload(
-    id,
-    to,
-    from,
-    token
-  );
-  try {
-    const assembledImages = {};
+fastify.post(
+  "/manga/:id",
+  async (
+    request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>
+  ) => {
+    const { id } = request.params;
+    const { limit, offset } = request.body;
+    const token = request.headers.authorization;
 
-    await Promise.all(
-      Object.entries(chaptersToDownload).map(async ([key, urls]) => {
-        await sleep(10000);
-        const imageBuffer = await assembleImages(urls);
-        const filePath = saveImageToFile(imageBuffer, `${key}.png`);
-        const manga = await prisma.chapter.findUnique({
-          where: {
-            number_mangaId: {
-              number: Number(key.split("_")[0]),
-              mangaId: id,
-            },
-          },
-        });
-        if (manga) {
-          await prisma.chapter.update({
-            where: {
-              number_mangaId: {
-                number: Number(key.split("_")[0]),
-                mangaId: id,
-              },
-            },
-            data: {
-              url: filePath,
-            },
-          });
-        } else {
-          await prisma.chapter.create({
-            data: {
-              number: Number(key.split("_")[0]),
-              mangaId: id,
-              url: filePath,
-            },
-          });
-        }
-        assembledImages[key] = filePath;
-      })
-    );
-
-    reply.header("Content-Type", "application/json").send({
-      message: "Images assembled",
-      data: Object.keys(assembledImages),
-    });
-  } catch (error) {
-    console.error(error);
-    reply.status(500).send("An error occurred");
+    const manga = await fetchMangaById(id, limit, offset, token);
+    return { manga };
   }
-});
+);
 
-fastify.get("/manga/:id/chapters", async (request, reply) => {
-  const { id } = request.params;
-  const chaptersDownloaded = await prisma.chapter.findMany({
-    where: {
-      mangaId: id,
-    },
-  });
-  chaptersDownloaded.map((manga) => {
-    manga.url = `http://localhost:3004${manga.url.replace(
-      "/home/ikebi/manga-reader",
-      ""
-    )}`;
-  });
-  const chaptersDownloadedNumbers = chaptersDownloaded.map(
-    (manga) => manga.number
-  );
-  let allChapters = [];
-  let hasMore = true;
-  let offset = 0;
-  const limit = 100;
-  const baseUrl = "https://api.mangadex.org";
-  const token = request.headers.authorization;
+fastify.post(
+  "/manga/:id/download/",
+  async (
+    request: FastifyRequest<{
+      Body: DownloadMangaIdRequestBody;
+      Params: DownloadMangaIdParams;
+    }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
+    const { from, to } = request.body.chaptersToDownloadFrom;
+    const token = request.headers.authorization;
 
-  while (hasMore) {
     try {
-      // await sleep(10000);
-      const resp = await axios.get(
-        `${baseUrl}/manga/${id}/feed?includeFuturePublishAt=0`,
-        {
-          params: {
-            limit: limit,
-            offset: offset,
-            "translatedLanguage[]": "en",
-            includeEmptyPages: 0,
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const chapters = resp.data.data;
-      allChapters = allChapters.concat(chapters);
-
-      if (chapters.length < limit) {
-        hasMore = false;
-      } else {
-        offset += limit;
-      }
+      await checkIfMangaExistsAndCreateIfNot(id);
     } catch (error) {
-      console.error("Error fetching chapters:", error);
-      hasMore = false;
+      console.error(error);
+      reply.status(500).send("An error occurred");
+    }
+
+    const chaptersToDownload = await getChapterImagesToDownload(
+      id,
+      to,
+      from,
+      token
+    );
+
+    try {
+      const assembledImages = await createChapterImagesFromChapterNumbers(
+        chaptersToDownload,
+        id
+      );
+
+      reply.header("Content-Type", "application/json").send({
+        message: "Images assembled",
+        data: Object.keys(assembledImages),
+      });
+    } catch (error) {
+      console.error(error);
+      reply.status(500).send("An error occurred");
     }
   }
-  allChapters = allChapters.filter((chapter) =>
-    chaptersDownloadedNumbers.includes(Number(chapter.attributes.chapter))
-  );
+);
 
-  const updatedChapters = allChapters.map((chapter) => {
-    const correspondingChapter = chaptersDownloaded.find(
-      (manga) => manga.number === Number(chapter.attributes.chapter)
-    );
-    return {
+fastify.get(
+  "/manga/:id/chapters",
+  async (
+    request: FastifyRequest<{
+      Params: DownloadChapterIdParams;
+    }>,
+    reply
+  ) => {
+    const { id } = request.params;
+    const token = request.headers.authorization;
+
+    const chaptersDownloaded = await getDownloadedChapters(id);
+
+    const chapters = await getChaptersPerManga(id, chaptersDownloaded, token);
+
+    reply.send({
+      chaptersLength: chapters.length,
+      chapters: chapters
+        .sort((a, b) => b.attributes.chapter - a.attributes.chapter)
+        .slice(10, 20),
+    });
+  }
+);
+
+fastify.get(
+  "/manga/:id/chapter/:chapterNumber",
+  async (
+    request: FastifyRequest<{
+      Params: ChapterIdParams;
+    }>,
+    reply
+  ) => {
+    const { id: mangaId, chapterNumber } = request.params;
+    const chapter = await getChapter(chapterNumber, mangaId);
+
+    reply.send({
       ...chapter,
-      url: correspondingChapter ? correspondingChapter.url : null,
-    };
-  });
-
-  reply.send({
-    chaptersLength: updatedChapters.length,
-    chapters: updatedChapters.sort((a, b) => a - b).slice(0, 20),
-  });
-});
-
-fastify.get("/manga/:id/chapter/:chapterNumber", async (request, reply) => {
-  const { id, chapterNumber } = request.params;
-  const chapter = await prisma.chapter.findUnique({
-    where: {
-      number_mangaId: {
-        number: Number(chapterNumber),
-        mangaId: id,
-      },
-    },
-  });
-
-  reply.send({
-    ...chapter,
-    url: `http://localhost:3004${chapter.url.replace(
-      "/home/ikebi/manga-reader",
-      ""
-    )}`,
-  });
-});
+      url: `http://localhost:${process.env.PORT}${chapter.url.replace(
+        "/home/ikebi/manga-reader",
+        ""
+      )}`,
+    });
+  }
+);
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3004 });
+    await fastify.listen({ port: Number(process.env.PORT) || 3004 });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
