@@ -126,7 +126,6 @@ fastify.post(
     try {
       await checkIfMangaExistsAndCreateIfNot(id);
     } catch (error) {
-      console.error(error);
       reply.status(500).send("An error occurred");
     }
 
@@ -148,7 +147,6 @@ fastify.post(
         data: Object.keys(assembledImages),
       });
     } catch (error) {
-      console.error(error);
       reply.status(500).send("An error occurred");
     }
   }

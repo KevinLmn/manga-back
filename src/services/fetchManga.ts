@@ -19,7 +19,7 @@ export const fetchManga = async (mangaName, access_token) => {
     });
     return resp.data;
   } catch (e) {
-    console.log(e);
+    throw new Error("Manga not found");
   }
 };
 
@@ -41,7 +41,7 @@ export const fetchMangaById = async (id, limit, offset, access_token) => {
     );
     return resp.data;
   } catch (e) {
-    console.log(e);
+    throw new Error("Manga not found");
   }
 };
 
@@ -57,7 +57,7 @@ export const fetchMangaByIdAndChapter = async (access_token, id) => {
     );
     return resp.data;
   } catch (e) {
-    console.log(e);
+    throw new Error("Manga not found");
   }
 };
 
@@ -93,7 +93,6 @@ export const getChapterImagesToDownload = async (id, to, from, token) => {
         offset += limit;
       }
     } catch (error) {
-      console.error("Error fetching chapters:", error);
       hasMore = false;
     }
   }
@@ -148,7 +147,7 @@ export const getChapterImagesToDownload = async (id, to, from, token) => {
   return hello;
 };
 
-export const checkIfMangaExistsAndCreateIfNot = async (mangaId) => {
+export const checkIfMangaExistsAndCreateIfNot = async (mangaId: string) => {
   const manga = await prisma.manga.findUnique({
     where: {
       mangaDexId: mangaId,
@@ -226,7 +225,6 @@ export const getChaptersPerManga = async (id, chaptersDownloaded, token) => {
         offset += limit;
       }
     } catch (error) {
-      console.error("Error fetching chapters:", error);
       hasMore = false;
     }
   }

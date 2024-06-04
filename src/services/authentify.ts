@@ -16,6 +16,6 @@ export const login = async () => {
     const response = await axios.post(url, payload);
     return response.data;
   } catch (e) {
-    console.log(e);
+    throw new Error("Invalid credentials");
   }
 };

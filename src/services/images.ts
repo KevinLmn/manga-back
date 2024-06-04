@@ -14,7 +14,6 @@ async function downloadImages(urls) {
     urls.map(async (url) => {
       const response = await axios.get(url, { responseType: "arraybuffer" });
       const buffer = Buffer.from(response.data, "binary");
-      console.log("downloading");
       await sleep(3000);
       return buffer;
     })

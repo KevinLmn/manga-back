@@ -21,7 +21,7 @@ export const login = async (username, password) => {
   try {
     const prisma = new PrismaClient();
     const response = await axios.post(url, payload);
-    const token = await prisma.token.create({
+    await prisma.token.create({
       data: {
         token: response.data.access_token,
         refreshToken: response.data.refresh_token,
@@ -29,7 +29,7 @@ export const login = async (username, password) => {
     });
     return response.data;
   } catch (e) {
-    console.log(e);
+    throw new Error("Invalid credentials");
   }
 };
 
@@ -78,6 +78,6 @@ export const checkIfTokenIsValidAndResetIfNot = async (request, reply) => {
     });
     request.headers.authorization = response.data.access_token;
   } catch (e) {
-    console.log(e);
+    throw new Error("Invalid credentials");
   }
 };
