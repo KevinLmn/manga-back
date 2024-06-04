@@ -18,107 +18,6 @@ export const fetchMangaByIdAndChapter = async (access_token, id) => {
   }
 };
 
-export const getChapterImagesToDownload = async (id, to, from, token) => {
-  let allChapters = [];
-  let hasMore = true;
-  let offset = 0;
-  const limit = 100;
-
-  while (hasMore) {
-    try {
-      await sleep(10000);
-      const resp = await axios.get(
-        `${process.env.MANGADEX_BASE_URL}/manga/${id}/feed?includeFuturePublishAt=0`,
-        {
-          params: {
-            limit: limit,
-            offset: offset,
-            "translatedLanguage[]": "en",
-            includeEmptyPages: 0,
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const chapters = resp.data.data;
-      allChapters = allChapters.concat(chapters);
-
-      if (chapters.length < limit) {
-        hasMore = false;
-      } else {
-        offset += limit;
-      }
-    } catch (error) {
-      hasMore = false;
-    }
-  }
-  const numbersToDownload = [];
-  for (let i = Number(from); i <= Number(to); i++) {
-    numbersToDownload.push(i);
-  }
-  allChapters = allChapters.filter((chapter) =>
-    numbersToDownload.includes(Number(chapter.attributes.chapter))
-  );
-
-  let chaptersToDownload = {};
-
-  const fetchChapterLinks = async (chapter) => {
-    await sleep(10000);
-    const response = await axios.get(
-      `${process.env.MANGADEX_BASE_URL}/at-home/server/${chapter.id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const downloadLinks = [];
-    const data = response.data.chapter.data;
-
-    data.forEach((scanData) => {
-      downloadLinks.push(
-        `${response.data.baseUrl}/data/${response.data.chapter.hash}/${scanData}`
-      );
-    });
-
-    return {
-      key: `${chapter.attributes.chapter}_${chapter.id}`,
-      links: downloadLinks,
-    };
-  };
-
-  const fetchAllChapterLinks = async () => {
-    const promises = allChapters.map(fetchChapterLinks);
-    const results = await Promise.all(promises);
-
-    results.forEach((result) => {
-      chaptersToDownload[result.key] = result.links;
-    });
-
-    return chaptersToDownload;
-  };
-
-  const hello = await fetchAllChapterLinks();
-  return hello;
-};
-
-export const checkIfMangaExistsAndCreateIfNot = async (mangaId: string) => {
-  const manga = await prisma.manga.findUnique({
-    where: {
-      mangaDexId: mangaId,
-    },
-  });
-  if (!manga) {
-    await prisma.manga.create({
-      data: {
-        mangaDexId: mangaId,
-      },
-    });
-  }
-};
-
 export const getChapter = async (chapterNumber, mangaId) => {
   const chapter = await prisma.chapter.findUnique({
     where: {
@@ -158,7 +57,7 @@ export const getChaptersPerManga = async (id, chaptersDownloaded, token) => {
 
   while (hasMore) {
     try {
-      // await sleep(10000);
+      await sleep(10000);
       const resp = await axios.get(
         `${baseUrl}/manga/${id}/feed?includeFuturePublishAt=0`,
         {

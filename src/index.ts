@@ -1,32 +1,20 @@
 import fastifyCors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
-import Fastify, { FastifyReply, FastifyRequest } from "fastify";
+import Fastify, { FastifyRequest } from "fastify";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  MangaIdParams,
-  MangaIdRequestBody,
-  getMangaByIdController,
-} from "./controllers/getMangaById.js";
+import { downloadChaptersController } from "./controllers/downloadChapters.js";
+import { getMangaByIdController } from "./controllers/getMangaById.js";
 import { getMangaBySearchController } from "./controllers/getMangaBySearch.js";
-import { LoginRequestBody, loginController } from "./controllers/login.js";
+import { loginController } from "./controllers/login.js";
 import { loginMiddleware } from "./middlewares.js";
 import {
-  checkIfMangaExistsAndCreateIfNot,
   getChapter,
-  getChapterImagesToDownload,
   getChaptersPerManga,
   getDownloadedChapters,
 } from "./services/fetchManga.js";
-import { createChapterImagesFromChapterNumbers } from "./services/images.js";
-import {
-  ChapterIdParams,
-  DownloadChapterIdParams,
-  DownloadMangaIdParams,
-  DownloadMangaIdRequestBody,
-  MangaRequestBody,
-} from "./utils.js";
+import { ChapterIdParams, DownloadChapterIdParams } from "./utils.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -54,80 +42,15 @@ fastify.register(fastifyStatic, {
   prefix: "/dist/images/",
 });
 
-fastify.post(
-  "/login",
-  async (
-    request: FastifyRequest<{ Body: LoginRequestBody }>,
-    reply: FastifyReply
-  ) => {
-    await loginController(request, reply);
-  }
-);
+fastify.post("/login", loginController);
 
-fastify.addHook(
-  "preHandler",
-  async (request: FastifyRequest, reply: FastifyReply) => {
-    await loginMiddleware(request, reply);
-  }
-);
+fastify.addHook("preHandler", loginMiddleware);
 
-fastify.post(
-  "/manga",
-  async (request: FastifyRequest<{ Body: MangaRequestBody }>) => {
-    return await getMangaBySearchController(request);
-  }
-);
+fastify.post("/manga", getMangaBySearchController);
 
-fastify.post(
-  "/manga/:id",
-  async (
-    request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>
-  ) => {
-    return await getMangaByIdController(request);
-  }
-);
+fastify.post("/manga/:id", getMangaByIdController);
 
-fastify.post(
-  "/manga/:id/download/",
-  async (
-    request: FastifyRequest<{
-      Body: DownloadMangaIdRequestBody;
-      Params: DownloadMangaIdParams;
-    }>,
-    reply: FastifyReply
-  ) => {
-    const { id } = request.params;
-    const { from, to } = request.body.chaptersToDownloadFrom;
-    const token = request.headers.authorization;
-
-    try {
-      await checkIfMangaExistsAndCreateIfNot(id);
-    } catch (error) {
-      reply.status(500).send("An error occurred");
-    }
-
-    const chaptersToDownload = await getChapterImagesToDownload(
-      id,
-      to,
-      from,
-      token
-    );
-
-    try {
-      const assembledImages = await createChapterImagesFromChapterNumbers(
-        chaptersToDownload,
-        id
-      );
-
-      reply.header("Content-Type", "application/json").send({
-        message: "Images assembled",
-        data: Object.keys(assembledImages),
-      });
-    } catch (error) {
-      reply.status(500).send("An error occurred");
-    }
-  }
-);
+fastify.post("/manga/:id/download/", downloadChaptersController);
 
 fastify.get(
   "/manga/:id/chapters",
