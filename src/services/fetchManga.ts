@@ -2,53 +2,10 @@ import axios from "axios";
 import prisma from "../prisma.js";
 import { sleep } from "../utils.js";
 
-const baseUrl = "https://api.mangadex.org";
-
-export const fetchManga = async (mangaName, access_token) => {
-  try {
-    const resp = await axios.get(`${baseUrl}/manga`, {
-      params: {
-        title: mangaName,
-        includes: ["author", "cover_art"],
-        contentRating: ["safe", "suggestive", "erotica", "pornographic"],
-        limit: 20,
-      },
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
-    return resp.data;
-  } catch (e) {
-    throw new Error("Manga not found");
-  }
-};
-
-export const fetchMangaById = async (id, limit, offset, access_token) => {
-  try {
-    const resp = await axios.get(
-      `${baseUrl}/manga/${id}/feed?includeFuturePublishAt=0`,
-      {
-        params: {
-          limit: limit,
-          offset: offset * limit,
-          "order[chapter]": "desc",
-          "translatedLanguage[]": "en",
-        },
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
-    );
-    return resp.data;
-  } catch (e) {
-    throw new Error("Manga not found");
-  }
-};
-
 export const fetchMangaByIdAndChapter = async (access_token, id) => {
   try {
     const resp = await axios.get(
-      `${baseUrl}/at-home/server/02d4b220-4b17-4051-b364-f5c197c5036e`,
+      `${process.env.MANGADEX_BASE_URL}/at-home/server/02d4b220-4b17-4051-b364-f5c197c5036e`,
       {
         headers: {
           Authorization: `Bearer ${access_token}`,
@@ -71,7 +28,7 @@ export const getChapterImagesToDownload = async (id, to, from, token) => {
     try {
       await sleep(10000);
       const resp = await axios.get(
-        `${baseUrl}/manga/${id}/feed?includeFuturePublishAt=0`,
+        `${process.env.MANGADEX_BASE_URL}/manga/${id}/feed?includeFuturePublishAt=0`,
         {
           params: {
             limit: limit,
@@ -109,7 +66,7 @@ export const getChapterImagesToDownload = async (id, to, from, token) => {
   const fetchChapterLinks = async (chapter) => {
     await sleep(10000);
     const response = await axios.get(
-      `${baseUrl}/at-home/server/${chapter.id}`,
+      `${process.env.MANGADEX_BASE_URL}/at-home/server/${chapter.id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

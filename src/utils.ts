@@ -1,14 +1,9 @@
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export type LoginRequestBody = {
-  username: string;
-  password: string;
-};
+export const TOKEN_DURATION = 900;
 
-export type MangaIdRequestBody = {
-  limit: number;
-  offset: number;
-};
+
+
 
 export type DownloadMangaIdRequestBody = {
   chaptersToDownloadFrom: {
@@ -18,10 +13,6 @@ export type DownloadMangaIdRequestBody = {
 };
 
 export type DownloadMangaIdParams = {
-  id: string;
-};
-
-export type MangaIdParams = {
   id: string;
 };
 

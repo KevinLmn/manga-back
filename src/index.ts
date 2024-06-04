@@ -5,13 +5,15 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
-  checkIfTokenIsValidAndResetIfNot,
-  login,
-} from "./services/authentification.js";
+  MangaIdParams,
+  MangaIdRequestBody,
+  getMangaByIdController,
+} from "./controllers/getMangaById.js";
+import { getMangaBySearchController } from "./controllers/getMangaBySearch.js";
+import { LoginRequestBody, loginController } from "./controllers/login.js";
+import { loginMiddleware } from "./middlewares.js";
 import {
   checkIfMangaExistsAndCreateIfNot,
-  fetchManga,
-  fetchMangaById,
   getChapter,
   getChapterImagesToDownload,
   getChaptersPerManga,
@@ -23,9 +25,6 @@ import {
   DownloadChapterIdParams,
   DownloadMangaIdParams,
   DownloadMangaIdRequestBody,
-  LoginRequestBody,
-  MangaIdParams,
-  MangaIdRequestBody,
   MangaRequestBody,
 } from "./utils.js";
 
@@ -61,38 +60,21 @@ fastify.post(
     request: FastifyRequest<{ Body: LoginRequestBody }>,
     reply: FastifyReply
   ) => {
-    const { username, password } = request.body;
-
-    try {
-      const response = await login(username, password);
-
-      const { access_token } = await response;
-
-      reply.send({ success: true, access_token });
-    } catch (error) {
-      reply.code(401).send({ success: false, message: "Invalid credentials" });
-    }
+    await loginController(request, reply);
   }
 );
 
-fastify.addHook("preHandler", async (request, reply) => {
-  if (request.routerPath === "/login") {
-    return;
+fastify.addHook(
+  "preHandler",
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    await loginMiddleware(request, reply);
   }
-  try {
-    await checkIfTokenIsValidAndResetIfNot(request, reply);
-  } catch (e) {
-    reply.code(401).send({ success: false, message: e.message });
-  }
-});
+);
 
 fastify.post(
   "/manga",
   async (request: FastifyRequest<{ Body: MangaRequestBody }>) => {
-    const { mangaName } = request.body;
-    const token = request.headers.authorization;
-    const manga = await fetchManga(mangaName, token);
-    return { manga };
+    return await getMangaBySearchController(request);
   }
 );
 
@@ -101,12 +83,7 @@ fastify.post(
   async (
     request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>
   ) => {
-    const { id } = request.params;
-    const { limit, offset } = request.body;
-    const token = request.headers.authorization;
-
-    const manga = await fetchMangaById(id, limit, offset, token);
-    return { manga };
+    return await getMangaByIdController(request);
   }
 );
 
