@@ -5,15 +5,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { downloadChaptersController } from "./controllers/downloadChapters.js";
-import { getMangaByIdController } from "./controllers/getMangaById.js";
+import {
+  MangaIdRequestBody,
+  getMangaByIdController,
+} from "./controllers/getMangaById.js";
 import { getMangaBySearchController } from "./controllers/getMangaBySearch.js";
 import { loginController } from "./controllers/login.js";
 import { loginMiddleware } from "./middlewares.js";
-import {
-  getChapter,
-  getChaptersPerManga,
-  getDownloadedChapters,
-} from "./services/fetchManga.js";
+import { getChapter, getDownloadedChapters } from "./services/fetchManga.js";
 import { ChapterIdParams, DownloadChapterIdParams } from "./utils.js";
 
 declare module "fastify" {
@@ -48,30 +47,44 @@ fastify.addHook("preHandler", loginMiddleware);
 
 fastify.post("/manga", getMangaBySearchController);
 
-fastify.post("/manga/:id", getMangaByIdController);
+fastify.post("/manga/:id/not-downloaded", getMangaByIdController);
 
 fastify.post("/manga/:id/download/", downloadChaptersController);
 
-fastify.get(
-  "/manga/:id/chapters",
+fastify.post(
+  "/manga/:id/downloaded",
   async (
     request: FastifyRequest<{
+      Body: MangaIdRequestBody;
       Params: DownloadChapterIdParams;
     }>,
     reply
   ) => {
     const { id } = request.params;
     const token = request.headers.authorization;
+    const { limit, offset } = request.body;
 
-    const chaptersDownloaded = await getDownloadedChapters(id);
+    let chapters = await getDownloadedChapters(id);
 
-    const chapters = await getChaptersPerManga(id, chaptersDownloaded, token);
+    chapters = chapters.map((chapter) => {
+      return {
+        ...chapter,
+        attributes: {
+          volume: chapter.volume,
+          chapter: chapter.number,
+          releaseDate: chapter.releaseDate,
+        },
+      };
+    });
 
     reply.send({
       chaptersLength: chapters.length,
       chapters: chapters
-        .sort((a, b) => b.attributes.chapter - a.attributes.chapter)
-        .slice(10, 20),
+        .sort((a, b) => b.number - a.number)
+        .slice(
+          offset * limit,
+          Math.min(offset * limit + limit, chapters.length)
+        ),
     });
   }
 );

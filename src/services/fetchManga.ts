@@ -1,6 +1,5 @@
 import axios from "axios";
 import prisma from "../prisma.js";
-import { sleep } from "../utils.js";
 
 export const fetchMangaByIdAndChapter = async (access_token, id) => {
   try {
@@ -57,7 +56,6 @@ export const getChaptersPerManga = async (id, chaptersDownloaded, token) => {
 
   while (hasMore) {
     try {
-      await sleep(10000);
       const resp = await axios.get(
         `${baseUrl}/manga/${id}/feed?includeFuturePublishAt=0`,
         {

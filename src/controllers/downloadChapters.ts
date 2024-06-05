@@ -169,7 +169,7 @@ export const downloadChaptersController = async (
     });
 
     return {
-      key: `${chapter.attributes.chapter}_${chapter.id}`,
+      ...chapter,
       links: downloadLinks,
     };
   };
@@ -178,25 +178,23 @@ export const downloadChaptersController = async (
     const promises = allChapters.map(fetchChapterLinks);
     const results = await Promise.all(promises);
 
-    results.forEach((result) => {
-      chaptersToDownload[result.key] = result.links;
-    });
-
-    return chaptersToDownload;
+    return results;
   };
 
   const chaptersToDownloadData = await fetchAllChapterLinks();
 
   const assembledImages = {};
 
-  Object.entries(chaptersToDownloadData).map(async ([key, urls]) => {
-    await sleep(10000);
-    const imageBuffer = await assembleImages(urls);
-    const filePath = saveImageToFile(imageBuffer, `${key}.png`);
+  chaptersToDownloadData.map(async (chapter) => {
+    const imageBuffer = await assembleImages(chapter.links);
+    const filePath = saveImageToFile(
+      imageBuffer,
+      `${chapter.attributes.chapter}_${chapter.id}.png`
+    );
     const manga = await prisma.chapter.findUnique({
       where: {
         number_mangaId: {
-          number: Number(key.split("_")[0]),
+          number: Number(chapter.attributes.chapter),
           mangaId: mangaId,
         },
       },
@@ -205,24 +203,30 @@ export const downloadChaptersController = async (
       await prisma.chapter.update({
         where: {
           number_mangaId: {
-            number: Number(key.split("_")[0]),
+            number: Number(chapter.attributes.chapter),
             mangaId: mangaId,
           },
         },
         data: {
           url: filePath,
+          volume: Number(chapter.attributes.volume),
+          releaseDate: new Date(chapter.attributes.publishAt),
+          pages: chapter.links.length,
         },
       });
     } else {
       await prisma.chapter.create({
         data: {
-          number: Number(key.split("_")[0]),
+          number: Number(chapter.attributes.chapter),
           mangaId: mangaId,
           url: filePath,
+          volume: Number(chapter.attributes.volume),
+          releaseDate: new Date(chapter.attributes.publishAt),
+          pages: chapter.links.length,
         },
       });
     }
-    assembledImages[key] = filePath;
+    assembledImages[chapter.attributes.chapter] = filePath;
   });
 
   reply.header("Content-Type", "application/json").send({
