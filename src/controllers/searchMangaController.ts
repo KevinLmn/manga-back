@@ -2,8 +2,9 @@ import axios from "axios";
 import { FastifyRequest } from "fastify";
 import { MangaRequestBody } from "../utils.js";
 
-export const getMangaBySearchController = async (
-  request: FastifyRequest<{ Body: MangaRequestBody }>
+export const searchMangaController = async (
+  request: FastifyRequest<{ Body: MangaRequestBody }>,
+  reply
 ) => {
   const { mangaName } = request.body;
   const token = request.headers.authorization;
@@ -21,8 +22,9 @@ export const getMangaBySearchController = async (
     });
 
     const manga = resp.data;
-    return { manga };
+    return reply.send({ manga });
   } catch (e) {
+    console.log(e);
     throw new Error("Manga not found");
   }
 };

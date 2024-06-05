@@ -16,8 +16,8 @@ export const loginController = async (
   try {
     const payload = new URLSearchParams({
       grant_type: "password",
-      username: username || process.env.MANGADEX_USERNAME,
-      password: password || process.env.MANGADEX_PASSWORD,
+      username: process.env.MANGADEX_USERNAME,
+      password: process.env.MANGADEX_PASSWORD,
       client_id: process.env.MANGADEX_CLIENT_ID,
       client_secret: process.env.MANGADEX_CLIENT_SECRET,
     });

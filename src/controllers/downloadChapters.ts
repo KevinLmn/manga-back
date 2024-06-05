@@ -146,8 +146,6 @@ export const downloadChaptersController = async (
     numbersToDownload.includes(Number(chapter.attributes.chapter))
   );
 
-  let chaptersToDownload = {};
-
   const fetchChapterLinks = async (chapter) => {
     await sleep(10000);
     const response = await axios.get(

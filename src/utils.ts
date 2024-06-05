@@ -16,10 +16,6 @@ export type DownloadMangaIdParams = {
   id: string;
 };
 
-export type DownloadChapterIdParams = {
-  id: string;
-};
-
 export type ChapterIdParams = {
   id: string;
   chapterNumber: string;

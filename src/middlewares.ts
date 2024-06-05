@@ -43,16 +43,18 @@ export const loginMiddleware = async (
       process.env.MANGADEX_REFRESH_TOKEN_URL,
       payload
     );
-    await prisma.token.update({
+    const token = await prisma.token.update({
       where: {
-        token: request.session.authToken,
+        token: databaseToken.token,
       },
       data: {
         token: response.data.access_token,
         refreshToken: response.data.refresh_token,
       },
     });
-    request.headers.authorization = response.data.access_token;
+    console.log(response.data.access_token, "11111111111111111111111");
+    console.log(token.token, "22222222222222222222222222");
+    reply.header("Authorization", token.token.split(" ")[1]);
   } catch (e) {
     throw new Error("Invalid credentials");
   }
