@@ -8,6 +8,7 @@ import { downloadChaptersController } from "./controllers/downloadChapters.js";
 import { getChapterController } from "./controllers/getChapter.js";
 import { getMangaController } from "./controllers/getMangaController.js";
 import { loginController } from "./controllers/login.js";
+import { refreshTokenController } from "./controllers/refreshToken.js";
 import { searchMangaController } from "./controllers/searchMangaController.js";
 import { loginMiddleware } from "./middlewares.js";
 
@@ -37,9 +38,11 @@ fastify.register(fastifyStatic, {
   prefix: "/dist/images/",
 });
 
-fastify.post("/login", loginController);
-
 fastify.addHook("preHandler", loginMiddleware);
+
+fastify.post("/refreshToken", refreshTokenController);
+
+fastify.post("/login", loginController);
 
 fastify.post("/manga", searchMangaController);
 

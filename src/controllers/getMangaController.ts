@@ -24,7 +24,6 @@ export const getMangaController = async (
   reply
 ) => {
   const isDownloaded = request.query.downloaded;
-  console.log(isDownloaded);
 
   if (isDownloaded === "true")
     return getDownloadedScansController(request, reply);
@@ -38,7 +37,6 @@ const getDownloadedScansController = async (
   }>,
   reply: FastifyReply
 ) => {
-  console.log("hello");
   const { id } = request.params;
   const { limit, offset } = request.body;
 
@@ -74,7 +72,6 @@ export const getNotDownloadedScansByMangaId = async (
   const { id } = request.params;
   const { limit, offset } = request.body;
   const token = request.headers.authorization;
-  console.log("notdownloaded");
 
   try {
     const resp = await axios.get(
@@ -91,8 +88,7 @@ export const getNotDownloadedScansByMangaId = async (
         },
       }
     );
-    const manga = resp.data;
-    return manga;
+    return resp.data;
   } catch (e) {
     console.log(e);
     throw new Error("Manga not found");

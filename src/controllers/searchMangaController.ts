@@ -13,7 +13,7 @@ export const searchMangaController = async (
       params: {
         title: mangaName,
         includes: ["author", "cover_art"],
-        contentRating: ["safe", "suggestive", "erotica", "pornographic"],
+        contentRating: ["safe", "suggestive"],
         limit: 20,
       },
       headers: {
@@ -21,6 +21,7 @@ export const searchMangaController = async (
       },
     });
 
+    console.log(resp.data);
     const manga = resp.data;
     return reply.send({ manga });
   } catch (e) {
