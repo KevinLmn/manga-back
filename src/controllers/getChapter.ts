@@ -1,4 +1,7 @@
 import { FastifyRequest } from "fastify";
+import fs from "fs";
+import path from "path";
+import sharp from "sharp";
 import prisma from "../prisma.js";
 import { ChapterIdParams } from "../utils.js";
 
@@ -8,7 +11,6 @@ export const getChapterController = async (
   }>,
   reply
 ) => {
-  console.log(request.params);
   const { id: mangaId, chapterNumber } = request.params;
   const chapter = await prisma.chapter.findUnique({
     where: {
@@ -19,11 +21,56 @@ export const getChapterController = async (
     },
   });
 
-  reply.send({
-    ...chapter,
-    url: `http://localhost:${process.env.PORT}${chapter.url.replace(
-      "/home/ikebi/manga-reader",
-      ""
-    )}`,
-  });
+  // reply.send({
+  //   ...chapter,
+  //   url: `http://localhost:${process.env.PORT}${chapter.url.replace(
+  //     "/home/ikebi/manga-reader",
+  //     ""
+  //   )}`,
+  // }, { "Content-Type": "blop"});
+  if (!fs.existsSync(chapter.url)) {
+    reply.status(404).send({ error: "File not found" });
+    return;
+  }
+  const imagePath = chapter.url.replace("/home/ikebi/manga-reader", "");
+  const fullPath = path.join("/home/ikebi/manga-reader", imagePath);
+
+  if (!fs.existsSync(fullPath)) {
+    reply.status(404).send({ error: "File not found" });
+    return;
+  }
+
+  try {
+    const image = sharp(fullPath);
+    const metadata = await image.metadata();
+    const height = metadata.height;
+    const width = metadata.width;
+    const chunkHeight = 1000; // Define height of each chunk
+
+    reply.raw.writeHead(200, {
+      "Content-Type": "application/octet-stream",
+      "Transfer-Encoding": "chunked",
+      "Access-Control-Allow-Origin": "*",
+    });
+
+    let yOffset = 0;
+
+    while (yOffset < height) {
+      const chunkHeightToExtract = Math.min(chunkHeight, height - yOffset);
+      const chunk = await image
+        .extract({ left: 0, top: yOffset, width, height: chunkHeightToExtract })
+        .toBuffer();
+      reply.raw.write(chunk);
+      yOffset += chunkHeight;
+    }
+
+    reply.raw.end();
+  } catch (err) {
+    if (!reply.raw.headersSent) {
+      reply.status(500).send("Internal Server Error");
+    } else {
+      reply.log.error(err);
+      reply.raw.end();
+    }
+  }
 };

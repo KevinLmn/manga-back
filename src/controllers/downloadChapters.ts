@@ -16,14 +16,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function downloadImages(urls) {
-  const images = await Promise.all(
-    urls.map(async (url) => {
-      const response = await axios.get(url, { responseType: "arraybuffer" });
-      const buffer = Buffer.from(response.data, "binary");
-      await sleep(3000);
-      return buffer;
-    })
-  );
+  // const images = await Promise.all(
+  // urls.map(async (url) => {
+  //   const response = await axios.get(url, { responseType: "arraybuffer" });
+  //   console.log("Downloading images");
+  //   const buffer = Buffer.from(response.data, "binary");
+  //   await sleep(3000);
+  //   return buffer;
+  // })
+
+  const images = [];
+  for (let url of urls) {
+    const response = await axios.get(url, { responseType: "arraybuffer" });
+    console.log("Downloading images");
+    const buffer = Buffer.from(response.data, "binary");
+    console.log("presleep");
+    await sleep(1000);
+    console.log("postsleep");
+    images.push(buffer);
+  }
   return images;
 }
 

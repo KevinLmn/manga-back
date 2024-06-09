@@ -21,7 +21,6 @@ export const searchMangaController = async (
       },
     });
 
-    console.log(resp.data);
     const manga = resp.data;
     return reply.send({ manga });
   } catch (e) {

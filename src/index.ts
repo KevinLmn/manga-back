@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { downloadChaptersController } from "./controllers/downloadChapters.js";
 import { getChapterController } from "./controllers/getChapter.js";
+import { getChapterPage } from "./controllers/getChapterPage.js";
 import { getMangaController } from "./controllers/getMangaController.js";
 import { loginController } from "./controllers/login.js";
 import { refreshTokenController } from "./controllers/refreshToken.js";
@@ -51,6 +52,8 @@ fastify.post("/manga/:id/download/", downloadChaptersController);
 fastify.post("/manga/:id", getMangaController);
 
 fastify.get("/manga/:id/chapter/:chapterNumber", getChapterController);
+
+fastify.get("/manga/chapter/:chapterId/:chapterPage", getChapterPage);
 
 const start = async () => {
   try {
