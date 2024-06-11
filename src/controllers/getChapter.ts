@@ -1,15 +1,19 @@
-import { FastifyRequest } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import prisma from "../prisma.js";
-import { ChapterIdParams } from "../utils.js";
+
+type ChapterIdParams = {
+  id: string;
+  chapterNumber: string;
+};
 
 export const getChapterController = async (
   request: FastifyRequest<{
     Params: ChapterIdParams;
   }>,
-  reply
+  reply : FastifyReply
 ) => {
   const { id: mangaId, chapterNumber } = request.params;
   const chapter = await prisma.chapter.findUnique({

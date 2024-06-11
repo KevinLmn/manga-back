@@ -1,5 +1,6 @@
-import axios from "axios";
-import { FastifyReply, FastifyRequest } from "fastify";
+import { Chapter } from "@prisma/client";
+import axios, { AxiosResponse } from "axios";
+import { FastifyRequest } from "fastify";
 import prisma from "../prisma.js";
 
 type MangaIdRequestBody = {
@@ -15,28 +16,30 @@ type MangaIdParams = {
   id: string;
 };
 
+type GetDownloadedScansControllerReturnType = {
+  chaptersLength: number;
+  chapters: Chapter[];
+};
+
 export const getMangaController = async (
   request: FastifyRequest<{
     Body: MangaIdRequestBody;
     Params: DownloadChapterIdParams;
     Querystring: { downloaded?: string };
-  }>,
-  reply
-) => {
+  }>
+): Promise<GetDownloadedScansControllerReturnType | AxiosResponse> => {
   const isDownloaded = request.query.downloaded;
 
-  if (isDownloaded === "true")
-    return getDownloadedScansController(request, reply);
-  return getNotDownloadedScansByMangaId(request, reply);
+  if (isDownloaded === "true") return getDownloadedScansController(request);
+  return getNotDownloadedScansByMangaId(request);
 };
 
 const getDownloadedScansController = async (
   request: FastifyRequest<{
     Body: MangaIdRequestBody;
     Params: DownloadChapterIdParams;
-  }>,
-  reply: FastifyReply
-) => {
+  }>
+): Promise<GetDownloadedScansControllerReturnType> => {
   const { id } = request.params;
   const { limit, offset } = request.body;
 
@@ -57,18 +60,17 @@ const getDownloadedScansController = async (
     };
   });
 
-  reply.send({
+  return {
     chaptersLength: chapters.length,
     chapters: chapters
       .sort((a, b) => b.number - a.number)
       .slice(offset * limit, Math.min(offset * limit + limit, chapters.length)),
-  });
+  };
 };
 
 export const getNotDownloadedScansByMangaId = async (
-  request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>,
-  reply
-) => {
+  request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>
+): Promise<AxiosResponse> => {
   const { id } = request.params;
   const { limit, offset } = request.body;
   const token = request.headers.authorization;
@@ -90,7 +92,7 @@ export const getNotDownloadedScansByMangaId = async (
     );
     return resp.data;
   } catch (e) {
-    console.log(e);
+    console.error(e);
     throw new Error("Manga not found");
   }
 };

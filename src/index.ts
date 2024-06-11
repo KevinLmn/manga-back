@@ -13,13 +13,13 @@ import { refreshTokenController } from "./controllers/refreshToken.js";
 import { searchMangaController } from "./controllers/searchMangaController.js";
 import { loginMiddleware } from "./middlewares.js";
 
-declare module "fastify" {
-  interface FastifyRequest {
-    session: {
-      authToken?: string;
-    };
-  }
-}
+// declare module "fastify" {
+//   interface FastifyRequest {
+//     session: {
+//       authToken?: string;
+//     };
+//   }
+// }
 
 const fastify = Fastify({ logger: true });
 

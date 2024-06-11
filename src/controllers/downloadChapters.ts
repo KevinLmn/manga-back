@@ -6,44 +6,39 @@ import prisma from "../prisma.js";
 import path from "path";
 import sharp from "sharp";
 import { fileURLToPath } from "url";
-import {
-  DownloadMangaIdParams,
-  DownloadMangaIdRequestBody,
-  sleep,
-} from "../utils.js";
+import { MangaDexChapter, sleep } from "../utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function downloadImages(urls) {
-  // const images = await Promise.all(
-  // urls.map(async (url) => {
-  //   const response = await axios.get(url, { responseType: "arraybuffer" });
-  //   console.log("Downloading images");
-  //   const buffer = Buffer.from(response.data, "binary");
-  //   await sleep(3000);
-  //   return buffer;
-  // })
+type DownloadMangaIdRequestBody = {
+  chaptersToDownloadFrom: {
+    from: number;
+    to: number;
+  };
+};
 
+type DownloadMangaIdParams = {
+  id: string;
+};
+
+async function downloadImages(urls): Promise<Buffer[]> {
   const images = [];
   for (let url of urls) {
     const response = await axios.get(url, { responseType: "arraybuffer" });
-    console.log("Downloading images");
     const buffer = Buffer.from(response.data, "binary");
-    console.log("presleep");
     await sleep(1000);
-    console.log("postsleep");
     images.push(buffer);
   }
   return images;
 }
 
-export async function assembleImages(urls) {
+export async function assembleImages(urls): Promise<Buffer> {
   await sleep(10000);
   const imageBuffers = await downloadImages(urls);
 
   const images = await Promise.all(
-    imageBuffers.map(async (buffer) => {
+    imageBuffers.map(async (buffer: Buffer) => {
       if (buffer) {
         const { width, height } = await sharp(buffer).metadata();
         return { buffer, width, height };
@@ -157,7 +152,9 @@ export const downloadChaptersController = async (
     numbersToDownload.includes(Number(chapter.attributes.chapter))
   );
 
-  const fetchChapterLinks = async (chapter) => {
+  const fetchChapterLinks = async (
+    chapter: MangaDexChapter
+  ): Promise<MangaDexChapter> => {
     await sleep(10000);
     const response = await axios.get(
       `${process.env.MANGADEX_BASE_URL}/at-home/server/${chapter.id}`,
@@ -183,7 +180,7 @@ export const downloadChaptersController = async (
     };
   };
 
-  const fetchAllChapterLinks = async () => {
+  const fetchAllChapterLinks = async (): Promise<MangaDexChapter[]> => {
     const promises = allChapters.map(fetchChapterLinks);
     const results = await Promise.all(promises);
 
@@ -194,7 +191,7 @@ export const downloadChaptersController = async (
 
   const assembledImages = {};
 
-  chaptersToDownloadData.map(async (chapter) => {
+  chaptersToDownloadData.map(async (chapter: MangaDexChapter) => {
     const imageBuffer = await assembleImages(chapter.links);
     const filePath = saveImageToFile(
       imageBuffer,
@@ -244,7 +241,7 @@ export const downloadChaptersController = async (
   });
 };
 
-export const saveImageToFile = (buffer, filename) => {
+export const saveImageToFile = (buffer: Buffer, filename: string): string => {
   const filePath = path
     .join(__dirname, "images", filename)
     .replace("/controllers", "");

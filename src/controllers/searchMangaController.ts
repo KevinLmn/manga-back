@@ -1,19 +1,35 @@
 import axios from "axios";
 import { FastifyRequest } from "fastify";
-import { MangaRequestBody } from "../utils.js";
+import { MangaDexChapter } from "../utils.js";
+
+type MangaRequestBody = {
+  mangaName: string;
+};
+
+type MangaDexManga = Omit<MangaDexChapter, "links">;
+
+type MangaDexResponse = {
+  result: string;
+  response: string;
+  data: MangaDexManga[];
+  limit: number;
+  offset: number;
+  total: number;
+};
 
 export const searchMangaController = async (
-  request: FastifyRequest<{ Body: MangaRequestBody }>,
-  reply
-) => {
+  request: FastifyRequest<{ Body: MangaRequestBody }>
+): Promise<MangaDexResponse> => {
   const { mangaName } = request.body;
   const token = request.headers.authorization;
+  const contentRating = ["safe", "suggestive"];
+  const includes = ["author", "cover_art"];
   try {
     const resp = await axios.get(`${process.env.MANGADEX_BASE_URL}/manga`, {
       params: {
         title: mangaName,
-        includes: ["author", "cover_art"],
-        contentRating: ["safe", "suggestive"],
+        includes,
+        contentRating,
         limit: 20,
       },
       headers: {
@@ -21,10 +37,11 @@ export const searchMangaController = async (
       },
     });
 
-    const manga = resp.data;
-    return reply.send({ manga });
-  } catch (e) {
-    console.log(e);
-    throw new Error("Manga not found");
+    const manga: MangaDexResponse = resp.data;
+    console.log(manga);
+    return { ...manga };
+  } catch (error) {
+    console.error(error);
+    throw new Error("Something went wrong with the search");
   }
 };

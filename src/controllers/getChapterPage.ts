@@ -1,6 +1,13 @@
 import axios from "axios";
 
-export const getChapterPage = async (request, reply) => {
+type GetChapterPageReturnType = {
+  url: string;
+  numberOfPages: number;
+};
+
+export const getChapterPage = async (
+  request
+): Promise<GetChapterPageReturnType> => {
   const { chapterId } = request.params;
   const { chapterPage } = request.params;
   const token = request.headers.authorization;
@@ -17,21 +24,15 @@ export const getChapterPage = async (request, reply) => {
 
   const chapter = response.data;
 
-  console.log(chapter);
-
   const highQualityUrl = "data";
   const lowQualityUrl = "data-saver";
-
-  const url = `${chapter.baseUrl}/${
-    quality === "high" ? highQualityUrl : lowQualityUrl
-  }/${chapter.chapter.hash}/${
+  const dataQualityUrl = quality === "high" ? highQualityUrl : lowQualityUrl;
+  const chapterDataQualityUrl =
     quality === "high"
       ? chapter.chapter.data[chapterPage - 1]
-      : chapter.chapter.dataSaver[chapterPage - 1]
-  }`;
+      : chapter.chapter.dataSaver[chapterPage - 1];
 
-  console.log(chapter.chapter.dataSaver);
-  console.log(chapterPage);
-  console.log(url);
+  const url = `${chapter.baseUrl}/${dataQualityUrl}/${chapter.chapter.hash}/${chapterDataQualityUrl}`;
+
   return { url: url, numberOfPages: chapter.chapter.data.length };
 };

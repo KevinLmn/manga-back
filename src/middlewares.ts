@@ -4,7 +4,6 @@ import { TOKEN_DURATION } from "./utils.js";
 
 export const loginMiddleware = async (
   request: FastifyRequest,
-  reply: FastifyReply
 ) => {
   if (
     request.routerPath === "/login" ||
@@ -16,7 +15,9 @@ export const loginMiddleware = async (
   if (request.headers.authorization === undefined) {
     return;
   }
+
   const currentToken = request.headers.authorization.replace("Bearer ", "");
+  
   const databaseToken = await prisma.token.findUnique({
     where: {
       token: currentToken,
@@ -34,14 +35,8 @@ export const loginMiddleware = async (
   const isTokenIssuedLessThan15MinutsAgo =
     now.getTime() - updatedAt.getTime() > TOKEN_DURATION * 1000;
 
-  // const random = Math.random() > 0.5;
-
   if (isTokenIssuedLessThan15MinutsAgo) {
     throw new Error("Token expired");
   }
 
-  // if (!isTokenIssuedLessThan15MinutsAgo) {
-  //   console.log("Token expired");
-  //   throw new Error("Token expired");
-  // }
 };

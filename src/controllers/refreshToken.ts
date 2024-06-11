@@ -1,7 +1,18 @@
 import axios from "axios";
+import { FastifyRequest } from "fastify";
 import prisma from "../prisma.js";
 
-export const refreshTokenController = async (request, reply) => {
+type RefreshTokenRequestBody = {
+  token: string;
+};
+
+type RefreshTokenReturnType = {
+  token: string;
+};
+
+export const refreshTokenController = async (
+  request: FastifyRequest<{ Body: RefreshTokenRequestBody }>
+): Promise<RefreshTokenReturnType> => {
   const currentToken = request.body.token;
 
   const databaseToken = await prisma.token.findFirst({
@@ -22,7 +33,7 @@ export const refreshTokenController = async (request, reply) => {
       process.env.MANGADEX_REFRESH_TOKEN_URL,
       payload
     );
-    const token = await prisma.token.update({
+    await prisma.token.update({
       where: {
         token: databaseToken.token,
       },
@@ -31,9 +42,9 @@ export const refreshTokenController = async (request, reply) => {
         refreshToken: response.data.refresh_token,
       },
     });
-    reply.send({ token: response.data.access_token });
+    return { token: response.data.access_token };
   } catch (e) {
-    console.log(e);
+    console.error(e);
     throw new Error("Token not found");
   }
 };
