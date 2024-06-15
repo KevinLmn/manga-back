@@ -4,7 +4,7 @@ import path from "path";
 import sharp from "sharp";
 import prisma from "../prisma.js";
 
-type ChapterIdParams = {
+export type ChapterIdParams = {
   id: string;
   chapterNumber: string;
 };
