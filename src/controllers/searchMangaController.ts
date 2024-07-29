@@ -3,7 +3,7 @@ import { FastifyRequest } from "fastify";
 import { MangaDexChapter } from "../utils.js";
 
 type MangaRequestBody = {
-  mangaName: string;
+  searchedName: string;
 };
 
 type MangaDexManga = Omit<MangaDexChapter, "links">;
@@ -20,25 +20,24 @@ type MangaDexResponse = {
 export const searchMangaController = async (
   request: FastifyRequest<{ Body: MangaRequestBody }>
 ): Promise<MangaDexResponse> => {
-  const { mangaName } = request.body;
+  const { searchedName } = request.body;
   const token = request.headers.authorization;
   const contentRating = ["safe", "suggestive"];
   const includes = ["author", "cover_art"];
   try {
     const resp = await axios.get(`${process.env.MANGADEX_BASE_URL}/manga`, {
       params: {
-        title: mangaName,
+        title: searchedName,
         includes,
         contentRating,
         limit: 20,
       },
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `${token}`,
       },
     });
 
     const manga: MangaDexResponse = resp.data;
-    console.log(manga);
     return { ...manga };
   } catch (error) {
     console.error(error);

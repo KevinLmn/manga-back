@@ -1,7 +1,6 @@
 import axios from "axios";
 
 export const getMyAnimeListLogin = async () => {
-  console.log("heyyyy");
   const client_id = "85084e9455f7daadaf504ad26608aeec";
   const client_secret =
     "82782d0754297705a62400ac66d8f36b06b8895976ecf470249d41ec46df160a";

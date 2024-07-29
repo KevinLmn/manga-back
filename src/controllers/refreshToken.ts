@@ -33,7 +33,7 @@ export const refreshTokenController = async (
       process.env.MANGADEX_REFRESH_TOKEN_URL,
       payload
     );
-    await prisma.token.update({
+    const newToken = await prisma.token.update({
       where: {
         token: databaseToken.token,
       },

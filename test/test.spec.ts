@@ -17,7 +17,6 @@ describe("POST /login", () => {
       success: false,
       message: responseText + 1,
     });
-    console.log(response);
     // expect(response.body).to.equal({
     //   success: false,
     //   message: "Invalid credentials",

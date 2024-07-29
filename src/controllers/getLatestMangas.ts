@@ -36,9 +36,7 @@ export const getLatestMangas = async (
         Authorization: `Bearer ${token}`,
       },
     });
-
     const manga: MangaDexResponse = resp.data;
-    console.log(manga);
     return { ...manga };
   } catch (error) {
     console.error(error);

@@ -47,7 +47,6 @@ export const getPopularMangas = async (
     });
 
     const manga: MangaDexResponse = resp.data;
-    console.log(manga);
     return { ...manga };
   } catch (error) {
     console.error(error);

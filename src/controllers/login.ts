@@ -21,10 +21,10 @@ export const loginController = async (
   try {
     const payload = new URLSearchParams({
       grant_type: "password",
-      username: username || process.env.MANGADEX_USERNAME,
-      // username: process.env.MANGADEX_USERNAME,
-      password: password || process.env.MANGADEX_PASSWORD,
-      // password: process.env.MANGADEX_PASSWORD,
+      // username: username || process.env.MANGADEX_USERNAME,
+      username: process.env.MANGADEX_USERNAME,
+      // password: password || process.env.MANGADEX_PASSWORD,
+      password: process.env.MANGADEX_PASSWORD,
       client_id: process.env.MANGADEX_CLIENT_ID,
       client_secret: process.env.MANGADEX_CLIENT_SECRET,
     });
@@ -32,6 +32,7 @@ export const loginController = async (
       process.env.MANGADEX_REFRESH_TOKEN_URL,
       payload
     );
+    console.log(response.data);
     await prisma.token.create({
       data: {
         token: response.data.access_token,
