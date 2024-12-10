@@ -1,6 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
 import { FastifyRequest } from "fastify";
 import prisma from "../prisma.js";
+dotenv.config();
 
 type RefreshTokenRequestBody = {
   token: string;

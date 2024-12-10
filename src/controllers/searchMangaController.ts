@@ -1,6 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
 import { FastifyRequest } from "fastify";
 import { MangaDexChapter } from "../utils.js";
+dotenv.config();
 
 type MangaRequestBody = {
   searchedName: string;
@@ -22,7 +24,7 @@ export const searchMangaController = async (
 ): Promise<MangaDexResponse> => {
   const { searchedName } = request.body;
   const token = request.headers.authorization;
-  const contentRating = ["safe", "suggestive"];
+  const contentRating = ["safe"];
   const includes = ["author", "cover_art"];
   try {
     const resp = await axios.get(`${process.env.MANGADEX_BASE_URL}/manga`, {

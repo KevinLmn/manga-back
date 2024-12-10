@@ -1,6 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
 import { FastifyRequest } from "fastify";
 import { MangaDexChapter } from "../utils.js";
+dotenv.config();
 
 type MangaRequestBody = {
   mangaName: string;
@@ -21,7 +23,7 @@ export const getLatestMangas = async (
   request: FastifyRequest<{ Body: MangaRequestBody }>
 ): Promise<MangaDexResponse> => {
   const token = request.headers.authorization;
-  const contentRating = ["safe", "suggestive"];
+  const contentRating = ["safe"];
   const includes = ["author", "cover_art"];
 
   try {

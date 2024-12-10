@@ -1,6 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
 import { FastifyReply, FastifyRequest } from "fastify";
 import prisma from "../prisma.js";
+dotenv.config();
 
 type LoginRequestBody = {
   username: string;

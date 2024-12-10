@@ -3,10 +3,12 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import fs from "fs";
 import prisma from "../prisma.js";
 
+import dotenv from "dotenv";
 import path from "path";
 import sharp from "sharp";
 import { fileURLToPath } from "url";
 import { MangaDexChapter, sleep } from "../utils.js";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
