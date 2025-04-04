@@ -1,53 +1,56 @@
-import { Chapter } from "@prisma/client";
-import axios, { AxiosResponse } from "axios";
-import { FastifyRequest } from "fastify";
-import prisma from "../prisma.js";
+import { Chapter } from '@prisma/client'
+import axios from 'axios'
+import { FastifyRequest } from 'fastify'
+import prisma from '../prisma.js'
 
 type MangaIdRequestBody = {
-  limit: number;
-  offset: number;
-};
+  limit: number
+  offset: number
+}
 
 type DownloadChapterIdParams = {
-  id: string;
-};
+  id: string
+}
 
 type MangaIdParams = {
-  id: string;
-};
+  id: string
+}
 
 type GetDownloadedScansControllerReturnType = {
-  chaptersLength: number;
-  chapters: Chapter[];
-};
+  chaptersLength: number
+  chapters: Chapter[]
+}
 
 export const getMangaController = async (
   request: FastifyRequest<{
-    Body: MangaIdRequestBody;
-    Params: DownloadChapterIdParams;
-    Querystring: { downloaded?: string };
+    Body: MangaIdRequestBody
+    Params: DownloadChapterIdParams
+    Querystring: { downloaded?: string }
   }>
-): Promise<GetDownloadedScansControllerReturnType | AxiosResponse> => {
-  const isDownloaded = request.query.downloaded;
+): Promise<
+  | GetDownloadedScansControllerReturnType
+  | getNotDownloadedScansByMangaIdResponse
+> => {
+  const isDownloaded = request.query.downloaded
 
-  if (isDownloaded === "true") return getDownloadedScansController(request);
-  return getNotDownloadedScansByMangaId(request);
-};
+  if (isDownloaded === 'true') return getDownloadedScansController(request)
+  return getNotDownloadedScansByMangaId(request)
+}
 
 const getDownloadedScansController = async (
   request: FastifyRequest<{
-    Body: MangaIdRequestBody;
-    Params: DownloadChapterIdParams;
+    Body: MangaIdRequestBody
+    Params: DownloadChapterIdParams
   }>
 ): Promise<GetDownloadedScansControllerReturnType> => {
-  const { id } = request.params;
-  const { limit, offset } = request.body;
+  const { id } = request.params
+  const { limit, offset } = request.body
 
   let chapters = await prisma.chapter.findMany({
     where: {
       mangaId: id,
     },
-  });
+  })
 
   chapters = chapters.map((chapter) => {
     return {
@@ -57,23 +60,28 @@ const getDownloadedScansController = async (
         chapter: chapter.number,
         releaseDate: chapter.releaseDate,
       },
-    };
-  });
+    }
+  })
 
   return {
     chaptersLength: chapters.length,
     chapters: chapters
       .sort((a, b) => b.number - a.number)
       .slice(offset * limit, Math.min(offset * limit + limit, chapters.length)),
-  };
-};
+  }
+}
+
+type getNotDownloadedScansByMangaIdResponse = {
+  chapters: any
+  manga: any
+}
 
 export const getNotDownloadedScansByMangaId = async (
   request: FastifyRequest<{ Body: MangaIdRequestBody; Params: MangaIdParams }>
-): Promise<AxiosResponse> => {
-  const { id } = request.params;
-  const { limit, offset } = request.body;
-  const token = request.headers.authorization;
+): Promise<getNotDownloadedScansByMangaIdResponse> => {
+  const { id } = request.params
+  const { limit, offset } = request.body
+  const token = request.headers.authorization
 
   try {
     const resp = await axios.get(
@@ -82,17 +90,30 @@ export const getNotDownloadedScansByMangaId = async (
         params: {
           limit: limit,
           offset: offset * limit,
-          "order[chapter]": "desc",
-          "translatedLanguage[]": "en",
+          'order[chapter]': 'desc',
+          'translatedLanguage[]': 'en',
         },
         headers: {
           Authorization: `Bearer ${token}`,
         },
       }
-    );
-    return resp.data;
+    )
+    const includes = ['author', 'cover_art']
+    const responseMangaDetail = await axios.get(
+      `https://api.mangadex.org/manga/${id}`,
+      {
+        params: {
+          includes,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+    console.log(responseMangaDetail.data)
+    return { manga: responseMangaDetail.data, chapters: resp.data }
   } catch (e) {
-    console.error(e);
-    throw new Error("Manga not found");
+    console.error(e)
+    throw new Error('Manga not found')
   }
-};
+}

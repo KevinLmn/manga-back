@@ -1,51 +1,58 @@
-import axios from "axios";
-import dotenv from "dotenv";
-import { FastifyReply, FastifyRequest } from "fastify";
-import prisma from "../prisma.js";
-dotenv.config();
+import dotenv from 'dotenv'
+import { FastifyReply, FastifyRequest } from 'fastify'
+import prisma from '../prisma.js'
+import { AuthService } from '../services/authService.js'
+dotenv.config()
 
 type LoginRequestBody = {
-  username: string;
-  password: string;
-};
+  username: string
+  password: string
+}
 
 type LoginControllerReturnType = {
-  success: boolean;
-  access_token: string;
-};
+  success: boolean
+  access_token?: string
+  error?: string
+}
 
 export const loginController = async (
   request: FastifyRequest<{ Body: LoginRequestBody }>,
   reply: FastifyReply
 ): Promise<LoginControllerReturnType> => {
-  const { username, password } = request.body;
-
   try {
-    const payload = new URLSearchParams({
-      grant_type: "password",
-      // username: username || process.env.MANGADEX_USERNAME,
-      username: process.env.MANGADEX_USERNAME,
-      // password: password || process.env.MANGADEX_PASSWORD,
-      password: process.env.MANGADEX_PASSWORD,
-      client_id: process.env.MANGADEX_CLIENT_ID,
-      client_secret: process.env.MANGADEX_CLIENT_SECRET,
-    });
-    const response = await axios.post(
-      process.env.MANGADEX_REFRESH_TOKEN_URL,
-      payload
-    );
-    console.log(response.data);
+    console.log('Starting login process...')
+
+    if (
+      !process.env.MANGADEX_USERNAME ||
+      !process.env.MANGADEX_PASSWORD ||
+      !process.env.MANGADEX_CLIENT_ID ||
+      !process.env.MANGADEX_CLIENT_SECRET
+    ) {
+      throw new Error('MangaDex credentials not found in environment variables')
+    }
+
+    console.log('Making request to MangaDex auth endpoint...')
+    const tokens = await AuthService.getTokens()
+
+    console.log('Saving token to database...')
     await prisma.token.create({
       data: {
-        token: response.data.access_token,
-        refreshToken: response.data.refresh_token,
+        token: tokens.access_token,
+        refreshToken: tokens.refresh_token,
       },
-    });
+    })
 
-    const { access_token } = await response.data;
-
-    return { success: true, access_token };
+    return { success: true, access_token: tokens.access_token }
   } catch (error) {
-    reply.code(401).send({ success: false, message: "Invalid credentials" });
+    console.error('Login error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      message: error.message,
+    })
+    return {
+      success: false,
+      error: error.response?.data?.error_description || error.message,
+    }
   }
-};
+}

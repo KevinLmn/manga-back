@@ -1,52 +1,46 @@
-import axios from "axios";
-import dotenv from "dotenv";
-import { FastifyRequest } from "fastify";
-import prisma from "../prisma.js";
-dotenv.config();
+import { FastifyRequest } from 'fastify'
+import prisma from '../prisma.js'
+import { AuthService } from '../services/authService.js'
 
 type RefreshTokenRequestBody = {
-  token: string;
-};
+  token: string
+}
 
 type RefreshTokenReturnType = {
-  token: string;
-};
+  token: string
+}
 
 export const refreshTokenController = async (
   request: FastifyRequest<{ Body: RefreshTokenRequestBody }>
 ): Promise<RefreshTokenReturnType> => {
-  const currentToken = request.body.token;
+  const currentToken = request.body.token
 
   const databaseToken = await prisma.token.findFirst({
     where: {
       token: currentToken,
     },
-  });
+  })
 
-  const payload = new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: databaseToken.refreshToken,
-    client_id: process.env.MANGADEX_CLIENT_ID,
-    client_secret: process.env.MANGADEX_CLIENT_SECRET,
-  });
+  if (!databaseToken) {
+    throw new Error('Token not found')
+  }
 
   try {
-    const response = await axios.post(
-      process.env.MANGADEX_REFRESH_TOKEN_URL,
-      payload
-    );
-    const newToken = await prisma.token.update({
+    const tokens = await AuthService.refreshToken(databaseToken.refreshToken)
+
+    await prisma.token.update({
       where: {
         token: databaseToken.token,
       },
       data: {
-        token: response.data.access_token,
-        refreshToken: response.data.refresh_token,
+        token: tokens.access_token,
+        refreshToken: tokens.refresh_token,
       },
-    });
-    return { token: response.data.access_token };
-  } catch (e) {
-    console.error(e);
-    throw new Error("Token not found");
+    })
+
+    return { token: tokens.access_token }
+  } catch (error) {
+    console.error('Refresh token error:', error)
+    throw new Error('Failed to refresh token')
   }
-};
+}

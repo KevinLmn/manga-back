@@ -5,6 +5,7 @@
     "@fastify/session": "^10.9.0",
     "@fastify/static": "^6.12.0",
     "@prisma/client": "^5.14.0",
+    "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.7.2",
     "canvas": "^2.11.2",
     "dotenv": "^16.4.5",
