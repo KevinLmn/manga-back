@@ -90,6 +90,11 @@ fastify.post('/favoriteManga', postFavoriteMangaController)
 
 fastify.get('/favoriteManga', getFavoriteMangaController)
 
+// Add health check route for Render
+fastify.get('/health', async (request, reply) => {
+  return { status: 'ok' }
+})
+
 const start = async () => {
   try {
     await fastify.listen({ port: Number(process.env.PORT) || 3004 })
