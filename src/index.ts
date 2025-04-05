@@ -1,6 +1,6 @@
-import fastifyCors from '@fastify/cors'
-import Fastify from 'fastify'
-import { downloadChaptersController } from './controllers/downloadChapters.js'
+import cors from '@fastify/cors'
+import fastify from 'fastify'
+import { downloadChapterController } from './controllers/downloadChapter.js'
 import {
   getFavoriteMangaController,
   postFavoriteMangaController,
@@ -24,12 +24,12 @@ import { proxyRoutes } from './routes/proxy.js'
 //   }
 // }
 
-const fastify = Fastify({
+const server = fastify({
   logger: true,
   ignoreTrailingSlash: true,
 })
 
-await fastify.register(fastifyCors, {
+server.register(cors, {
   origin: process.env.NEXT_PUBLIC_FRONT_END_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -42,61 +42,45 @@ await fastify.register(fastifyCors, {
   exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
 })
 
-fastify.addHook('preHandler', loginMiddleware)
+server.addHook('preHandler', loginMiddleware)
 
-fastify.post('/refreshToken', refreshTokenController)
+server.post('/refreshToken', refreshTokenController)
 
-fastify.post('/login', loginController)
+server.post('/login', loginController)
 
-fastify.post('/manga', searchMangaController)
+server.post('/manga', searchMangaController)
 
-interface DownloadMangaIdParams {
-  id: string
-  chapterId: string
-}
+server.post('/manga/:id', getMangaController)
 
-fastify.get<{
-  Params: DownloadMangaIdParams
-}>('/manga/:id/download/:chapterId', async (request, reply) => {
-  return downloadChaptersController(request, reply)
-})
+server.get('/manga/:id/chapter/:chapterNumber', getChapterController)
 
-fastify.post('/manga/:id', getMangaController)
+server.get('/manga/chapter/:chapterId/:chapterPage', getChapterPage)
 
-fastify.get('/manga/:id/chapter/:chapterNumber', getChapterController)
+server.get('/manga/:id/download/:chapterId', downloadChapterController)
 
-fastify.get('/manga/chapter/:chapterId/:chapterPage', getChapterPage)
+server.get('/popular', getPopularMangas)
 
-fastify.get('/popular', getPopularMangas)
+server.get('/latest', getLatestMangas)
 
-fastify.get('/latest', getLatestMangas)
+server.post('/favoriteManga', postFavoriteMangaController)
 
-fastify.post('/favoriteManga', postFavoriteMangaController)
-
-fastify.get('/favoriteManga', getFavoriteMangaController)
+server.get('/favoriteManga', getFavoriteMangaController)
 
 // Register proxy route
-fastify.register(proxyRoutes, { prefix: '/' })
+server.register(proxyRoutes, { prefix: '/' })
 
 // Add health check route for Render
-fastify.get('/health', async (request, reply) => {
+server.get('/health', async () => {
   return { status: 'ok' }
 })
 
-const start = async () => {
-  try {
-    const port = parseInt(process.env.PORT || '3004', 10)
-    await fastify.listen({
-      port,
-      host: '0.0.0.0',
-    })
-    console.log(`Server is running on port ${port}`)
-  } catch (err) {
-    fastify.log.error(err)
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3004
+server.listen({ port, host: '0.0.0.0' }, (err, address) => {
+  if (err) {
+    console.error(err)
     process.exit(1)
   }
-}
+  console.log(`Server is running on port ${port}`)
+})
 
-start()
-
-export default fastify
+export default server

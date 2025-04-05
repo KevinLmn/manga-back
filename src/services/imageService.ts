@@ -234,19 +234,6 @@ export class ImageService {
     console.log(`Starting processing of ${urls.length} images...`)
 
     try {
-      // Set appropriate headers for the response if it's an HTTP response
-      if (
-        'writeHead' in writeStream &&
-        typeof (writeStream as any).writeHead === 'function'
-      ) {
-        ;(writeStream as any).writeHead(200, {
-          'Content-Type': 'image/png',
-          'Content-Disposition': `attachment; filename="chapter-${Date.now()}.png"`,
-          'Cache-Control': 'no-cache',
-          'X-Content-Type-Options': 'nosniff',
-        })
-      }
-
       // Step 1: Download all images
       const imageBuffers = await this.downloadImages(urls)
 
@@ -281,19 +268,10 @@ export class ImageService {
       })
     } catch (error) {
       console.error('Assembly/streaming error:', error)
-      writeStream.end()
-
-      // Handle ApiError or convert to ApiError
-      if (error instanceof ApiError) {
-        throw error
-      } else {
-        throw new ApiError(
-          `Failed to process and stream images: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-          500
-        )
-      }
+      throw new ApiError(
+        `Failed to process and stream images: ${error.message}`,
+        500
+      )
     }
   }
 }
