@@ -12,17 +12,12 @@ export async function proxyRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      fastify.log.info(`Proxying image from: ${url}`)
-      console.log('Received request with URL:', url)
+      // Decode the URL to handle double encoding
+      const decodedUrl = decodeURIComponent(url)
+      fastify.log.info(`Proxying image from: ${decodedUrl}`)
 
       // Validate that the URL is from MangaDex
-      const urlObj = new URL(url)
-      console.log('Parsed URL:', {
-        hostname: urlObj.hostname,
-        pathname: urlObj.pathname,
-        search: urlObj.search,
-      })
-
+      const urlObj = new URL(decodedUrl)
       if (
         !urlObj.hostname.includes('mangadex.org') &&
         !urlObj.hostname.includes('mangadex.network')
@@ -32,10 +27,7 @@ export async function proxyRoutes(fastify: FastifyInstance) {
         return
       }
 
-      console.log('Making fetch request to:', url)
-      const response = await fetch(url)
-      console.log('Fetch response status:', response.status)
-
+      const response = await fetch(decodedUrl)
       if (!response.ok) {
         fastify.log.error(
           `Failed to fetch image: ${response.status} ${response.statusText}`
@@ -48,21 +40,23 @@ export async function proxyRoutes(fastify: FastifyInstance) {
 
       const contentType = response.headers.get('content-type')
       const contentLength = response.headers.get('content-length')
-      console.log('Response headers:', {
-        contentType,
-        contentLength,
-        allHeaders: Object.fromEntries(response.headers.entries()),
+
+      // Set response headers
+      reply.raw.writeHead(200, {
+        'Content-Type': contentType || 'image/jpeg',
+        'Content-Length': contentLength || '',
+        'Cache-Control': 'public, max-age=31536000',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type',
       })
 
-      reply
-        .header('Content-Type', contentType)
-        .header('Content-Length', contentLength)
-        .header('Cache-Control', 'public, max-age=31536000')
-        .header('Access-Control-Allow-Origin', '*')
-        .header('Access-Control-Allow-Methods', 'GET')
-        .header('Access-Control-Allow-Headers', 'Content-Type')
-
-      return response.body.pipe(reply.raw)
+      // Stream the response
+      if (response.body) {
+        response.body.pipe(reply.raw)
+      } else {
+        throw new Error('Response body is null')
+      }
     } catch (error) {
       console.error('Error in proxy route:', error)
       fastify.log.error('Error proxying image:', error)
