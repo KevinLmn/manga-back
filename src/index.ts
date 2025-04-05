@@ -1,9 +1,5 @@
 import fastifyCors from '@fastify/cors'
-import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import { downloadChaptersController } from './controllers/downloadChapters.js'
 import {
   getFavoriteMangaController,
@@ -33,7 +29,7 @@ const fastify = Fastify({
 })
 
 await fastify.register(fastifyCors, {
-  origin: 'http://localhost:3005',
+  origin: process.env.NEXT_PUBLIC_FRONT_END_URL || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -43,18 +39,6 @@ await fastify.register(fastifyCors, {
     'X-Requested-With',
   ],
   exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
-})
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-if (!fs.existsSync(path.join(__dirname, 'images'))) {
-  fs.mkdirSync(path.join(__dirname, 'images'))
-}
-
-fastify.register(fastifyStatic, {
-  root: path.join(path.resolve(), 'dist/images'),
-  prefix: '/dist/images/',
 })
 
 fastify.addHook('preHandler', loginMiddleware)
@@ -97,7 +81,12 @@ fastify.get('/health', async (request, reply) => {
 
 const start = async () => {
   try {
-    await fastify.listen({ port: Number(process.env.PORT) || 3004 })
+    const port = parseInt(process.env.PORT || '3004', 10)
+    await fastify.listen({
+      port,
+      host: '0.0.0.0',
+    })
+    console.log(`Server is running on port ${port}`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)

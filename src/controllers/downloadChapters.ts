@@ -33,7 +33,7 @@ export const downloadChaptersController = async (
 
     // Set response headers
     reply.raw.writeHead(200, {
-      'Access-Control-Allow-Origin': 'http://localhost:3005',
+      'Access-Control-Allow-Origin': `${process.env.NEXT_PUBLIC_FRONT_END_URL}`,
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers':

@@ -2,6 +2,10 @@ import { expect } from 'chai'
 import request from 'supertest'
 import fastify from '../src/index.js'
 
+// Add Mocha type definitions
+declare const describe: (title: string, fn: () => void) => void
+declare const it: (title: string, fn: (done?: () => void) => void) => void
+
 describe('POST /login', () => {
   it('should return 401 with "Invalid credentials" for wrong username and password', async () => {
     const response = await request(fastify.server)
