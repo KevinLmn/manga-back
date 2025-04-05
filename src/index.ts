@@ -14,6 +14,7 @@ import { loginController } from './controllers/login.js'
 import { refreshTokenController } from './controllers/refreshToken.js'
 import { searchMangaController } from './controllers/searchMangaController.js'
 import { loginMiddleware } from './middlewares.js'
+import { proxyRoutes } from './routes/proxy.js'
 
 // declare module "fastify" {
 //   interface FastifyRequest {
@@ -73,6 +74,9 @@ fastify.get('/latest', getLatestMangas)
 fastify.post('/favoriteManga', postFavoriteMangaController)
 
 fastify.get('/favoriteManga', getFavoriteMangaController)
+
+// Register proxy route
+fastify.register(proxyRoutes, { prefix: '/' })
 
 // Add health check route for Render
 fastify.get('/health', async (request, reply) => {
